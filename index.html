@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AI កាត់ផ្ទៃក្រោយ & ប្តូរពណ៌ផ្ទៃមេឃ</title>
+  <!-- Tailwind CSS & Font Awesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Kantumruy+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- MediaPipe Selfie Segmentation (Lightweight & Stable on Mobile) -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+
+  <style>
+    body { font-family: 'Kantumruy Pro', sans-serif; }
+    .checkerboard {
+      background-image: linear-gradient(45deg, #e5e7eb 25%, transparent 25%), 
+                        linear-gradient(-45deg, #e5e7eb 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #e5e7eb 75%), 
+                        linear-gradient(-45deg, transparent 75%, #e5e7eb 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center p-3 sm:p-6">
+
+  <!-- Header -->
+  <header class="w-full max-w-2xl text-center my-3">
+    <div class="inline-flex items-center justify-center p-2 bg-blue-600/20 text-blue-400 rounded-full mb-2">
+      <i class="fa-solid fa-wand-magic-sparkles text-xl px-2"></i>
+    </div>
+    <h1 class="text-xl sm:text-2xl font-bold tracking-wide">កាត់ផ្ទៃក្រោយ & ដាក់ពណ៌ផ្ទៃមេឃ AI</h1>
+    <p class="text-xs sm:text-sm text-slate-400 mt-1">លឿន ច្បាស់ ដំណើរការលើទូរស័ព្ទដៃបាន ១០០%</p>
+  </header>
+
+  <!-- Main Workspace Card -->
+  <main class="w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl space-y-4">
+    
+    <!-- Upload Box -->
+    <div id="uploadArea" class="border-2 border-dashed border-slate-700 hover:border-blue-500 rounded-xl p-6 text-center cursor-pointer transition bg-slate-950/50">
+      <input type="file" id="imageInput" accept="image/*" class="hidden">
+      <div class="flex flex-col items-center space-y-2">
+        <i class="fa-solid fa-cloud-arrow-up text-3xl text-blue-500"></i>
+        <span class="text-sm font-semibold text-slate-200">ចុចទីនេះដើម្បីជ្រើសរើសរូបភាព</span>
+        <span class="text-xs text-slate-500">គាំទ្រទម្រង់ JPG, PNG, WEBP</span>
+      </div>
+    </div>
+
+    <!-- Preview & Processing Area -->
+    <div id="workspace" class="hidden space-y-4">
+      <div class="relative w-full aspect-square max-h-[380px] rounded-xl overflow-hidden checkerboard flex items-center justify-center border border-slate-700">
+        <!-- Canvas for rendering -->
+        <canvas id="outputCanvas" class="max-w-full max-h-full object-contain"></canvas>
+        
+        <!-- Processing Spinner -->
+        <div id="loader" class="absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2 hidden">
+          <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <span class="text-xs text-blue-300 font-medium" id="statusText">AI កំពុងកាត់ផ្ទៃក្រោយ...</span>
+        </div>
+      </div>
+
+      <!-- Background Style Selectors -->
+      <div class="space-y-3">
+        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">ជ្រើសរើសផ្ទៃខាងក្រោយ / ពណ៌មេឃ</label>
+        
+        <div class="grid grid-cols-4 sm:grid-cols-6 gap-2">
+          <!-- Transparent -->
+          <button onclick="setBg('transparent')" class="bg-slate-800 border border-slate-700 rounded-lg p-2 text-center hover:ring-2 ring-blue-500 text-xs flex flex-col items-center gap-1">
+            <i class="fa-solid fa-border-none text-slate-400 text-base"></i>
+            <span>ថ្លា (PNG)</span>
+          </button>
+          <!-- Sky Blue Gradient -->
+          <button onclick="setBg('sky-clear')" class="h-14 rounded-lg bg-gradient-to-b from-sky-400 to-sky-100 border border-slate-700 hover:ring-2 ring-blue-500 flex flex-col justify-end p-1 text-[10px] text-slate-900 font-bold">
+            មេឃស្រឡះ
+          </button>
+          <!-- Sunset Sky -->
+          <button onclick="setBg('sky-sunset')" class="h-14 rounded-lg bg-gradient-to-b from-orange-400 via-rose-400 to-indigo-600 border border-slate-700 hover:ring-2 ring-blue-500 flex flex-col justify-end p-1 text-[10px] text-white font-bold">
+            មេឃពេលល្ងាច
+          </button>
+          <!-- Deep Blue Sky -->
+          <button onclick="setBg('sky-deep')" class="h-14 rounded-lg bg-gradient-to-b from-blue-700 to-cyan-400 border border-slate-700 hover:ring-2 ring-blue-500 flex flex-col justify-end p-1 text-[10px] text-white font-bold">
+            មេឃខៀវស្រស់
+          </button>
+          <!-- Studio Blue (ID Photo) -->
+          <button onclick="setBg('#0055A5')" class="h-14 rounded-lg bg-[#0055A5] border border-slate-700 hover:ring-2 ring-blue-500 flex flex-col justify-end p-1 text-[10px] text-white font-bold">
+            ខៀវសំបុត្រ
+          </button>
+          <!-- Studio White -->
+          <button onclick="setBg('#FFFFFF')" class="h-14 rounded-lg bg-white border border-slate-700 hover:ring-2 ring-blue-500 flex flex-col justify-end p-1 text-[10px] text-slate-900 font-bold">
+            ពណ៌ស
+          </button>
+        </div>
+
+        <!-- Custom Color Picker -->
+        <div class="flex items-center gap-3 bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          <label class="text-xs text-slate-400">រើសពណ៌ផ្ទាល់ខ្លួន:</label>
+          <input type="color" id="customColor" value="#38bdf8" oninput="setBg(this.value)" class="w-8 h-8 rounded border-0 cursor-pointer bg-transparent">
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-2 pt-2">
+        <button onclick="resetApp()" class="flex-1 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 rounded-xl text-xs font-semibold text-slate-300 transition">
+          <i class="fa-solid fa-rotate-left mr-1.5"></i> រូបភាពថ្មី
+        </button>
+        <button onclick="downloadResult()" class="flex-2 w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold text-white shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-download"></i> ទាញយករូបភាព (HD)
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const uploadArea = document.getElementById('uploadArea');
+    const imageInput = document.getElementById('imageInput');
+    const workspace = document.getElementById('workspace');
+    const canvas = document.getElementById('outputCanvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const loader = document.getElementById('loader');
+
+    let originalImg = null;
+    let segmentationMask = null;
+    let currentBg = 'sky-clear';
+
+    // Initialize MediaPipe AI Model
+    const selfieSegmentation = new SelfieSegmentation({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+    });
+
+    selfieSegmentation.setOptions({
+      modelSelection: 1 // 1 = Landscape/Full body (Fast & highly accurate)
+    });
+
+    selfieSegmentation.onResults((results) => {
+      segmentationMask = results.segmentationMask;
+      renderImage();
+      loader.classList.add('hidden');
+    });
+
+    // Upload Handlers
+    uploadArea.addEventListener('click', () => imageInput.click());
+
+    imageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        originalImg = new Image();
+        originalImg.onload = () => {
+          workspace.classList.remove('hidden');
+          uploadArea.classList.add('hidden');
+          loader.classList.remove('hidden');
+
+          canvas.width = originalImg.naturalWidth;
+          canvas.height = originalImg.naturalHeight;
+
+          // Process AI Segmentation
+          selfieSegmentation.send({ image: originalImg }).catch((err) => {
+            alert('មានបញ្ហាក្នុងការដំណើរការ AI: ' + err.message);
+            loader.classList.add('hidden');
+          });
+        };
+        originalImg.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Background Render Engine
+    function renderImage() {
+      if (!originalImg || !segmentationMask) return;
+
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.save();
+
+      // 1. Draw Background
+      if (currentBg === 'transparent') {
+        // Leave clear
+      } else if (currentBg === 'sky-clear') {
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, '#38bdf8');
+        grad.addColorStop(1, '#e0f2fe');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+      } else if (currentBg === 'sky-sunset') {
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, '#f97316');
+        grad.addColorStop(0.5, '#fb7185');
+        grad.addColorStop(1, '#4338ca');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+      } else if (currentBg === 'sky-deep') {
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, '#1d4ed8');
+        grad.addColorStop(1, '#22d3ee');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+      } else {
+        ctx.fillStyle = currentBg;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // 2. Composite Subject using AI Mask
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.drawImage(segmentationMask, 0, 0, w, h);
+
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.drawImage(originalImg, 0, 0, w, h);
+
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.restore();
+    }
+
+    function setBg(type) {
+      currentBg = type;
+      renderImage();
+    }
+
+    function resetApp() {
+      originalImg = null;
+      segmentationMask = null;
+      imageInput.value = '';
+      workspace.classList.add('hidden');
+      uploadArea.classList.remove('hidden');
+    }
+
+    function downloadResult() {
+      const link = document.createElement('a');
+      link.download = currentBg === 'transparent' ? 'cutout.png' : 'sky-photo.jpg';
+      link.href = canvas.toDataURL(currentBg === 'transparent' ? 'image/png' : 'image/jpeg', 0.95);
+      link.click();
+    }
+  </script>
+</body>
+</html>
